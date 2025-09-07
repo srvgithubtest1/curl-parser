@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cURL to Code Converter</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles and font */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Custom scrollbar for a better dark mode experience */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Style for the code blocks */
+        pre code {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-300">
+
+    <!-- Main Application Container -->
+    <div class="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+        
+        <!-- Header Section -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-cyan-400 tracking-tight">cURL to Code Converter</h1>
+            <p class="mt-2 text-slate-400">Deconstruct cURL commands and generate code snippets in your favorite language.</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="mb-8">
+            <label for="curlInput" class="block text-sm font-medium text-slate-400 mb-2">Paste your cURL command here:</label>
+            <textarea id="curlInput"
+                class="w-full h-40 p-4 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none transition-shadow duration-300 resize-y"
+                placeholder="e.g., curl -X POST 'https://api.example.com/users' -H 'Content-Type: application/json' -d '{\"name\": \"John Doe\"}'"></textarea>
+        </div>
+
+        <!-- Parsed Output Section -->
+        <div id="output-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- URL Card -->
+            <div class="bg-slate-800/50 backdrop-blur-sm p-5 rounded-lg shadow-lg flex flex-col border border-slate-700/50">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-semibold text-cyan-400">URL</h2>
+                    <button data-copy="url" class="copy-btn group flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-md bg-slate-700 hover:bg-cyan-600 transition-colors">
+                        <!-- Icon and text will be injected by JS -->
+                    </button>
+                </div>
+                <pre class="flex-grow bg-slate-950 p-3 rounded-md overflow-x-auto text-sm min-h-[50px]"><code id="outputUrl"></code></pre>
+            </div>
+            <!-- Method Card -->
+            <div class="bg-slate-800/50 backdrop-blur-sm p-5 rounded-lg shadow-lg flex flex-col border border-slate-700/50">
+                 <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-semibold text-cyan-400">Method</h2>
+                     <button data-copy="method" class="copy-btn group flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-md bg-slate-700 hover:bg-cyan-600 transition-colors">
+                        <!-- Icon and text will be injected by JS -->
+                     </button>
+                </div>
+                <pre class="flex-grow bg-slate-950 p-3 rounded-md overflow-x-auto text-sm min-h-[50px]"><code id="outputMethod"></code></pre>
+            </div>
+            <!-- Headers Card -->
+            <div class="md:col-span-2 bg-slate-800/50 backdrop-blur-sm p-5 rounded-lg shadow-lg flex flex-col border border-slate-700/50">
+                 <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-semibold text-cyan-400">Headers</h2>
+                     <button data-copy="headers" class="copy-btn group flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-md bg-slate-700 hover:bg-cyan-600 transition-colors">
+                        <!-- Icon and text will be injected by JS -->
+                     </button>
+                </div>
+                <pre class="flex-grow bg-slate-950 p-3 rounded-md overflow-x-auto text-sm min-h-[100px]"><code id="outputHeaders"></code></pre>
+            </div>
+            <!-- Body Card -->
+             <div class="md:col-span-2 bg-slate-800/50 backdrop-blur-sm p-5 rounded-lg shadow-lg flex flex-col border border-slate-700/50">
+                 <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-semibold text-cyan-400">Body</h2>
+                     <button data-copy="body" class="copy-btn group flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-md bg-slate-700 hover:bg-cyan-600 transition-colors">
+                        <!-- Icon and text will be injected by JS -->
+                     </button>
+                </div>
+                <pre class="flex-grow bg-slate-950 p-3 rounded-md overflow-x-auto text-sm min-h-[150px]"><code id="outputBody"></code></pre>
+            </div>
+        </div>
+        
+        <!-- Code Generation Section -->
+        <div class="mt-8">
+            <div class="bg-slate-800/50 backdrop-blur-sm p-5 rounded-lg shadow-lg flex flex-col border border-slate-700/50">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                    <h2 class="text-xl font-semibold text-cyan-400">Generate Code Snippet</h2>
+                    <div class="flex items-center gap-4 w-full sm:w-auto">
+                        <select id="languageSelector" class="w-full sm:w-auto bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block p-2.5">
+                            <option value="js">JavaScript (fetch)</option>
+                            <option value="python">Python (requests)</option>
+                            <option value="php">PHP (cURL)</option>
+                            <option value="go">Go (net/http)</option>
+                            <option value="rust">Rust (reqwest)</option>
+                        </select>
+                        <button id="copyCodeBtn" class="group flex items-center gap-2 text-sm font-medium px-3 py-2.5 rounded-md bg-slate-700 hover:bg-cyan-600 transition-colors">
+                            <!-- Icon and text will be injected by JS -->
+                        </button>
+                    </div>
+                </div>
+                <pre class="flex-grow bg-slate-950 p-4 rounded-md overflow-x-auto text-sm min-h-[250px]"><code id="outputCode"></code></pre>
+            </div>
+        </div>
+
+        <!-- Copy All Button -->
+        <div class="mt-8 text-center">
+             <button id="copyAllBtn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 flex items-center gap-3 mx-auto">
+                <!-- Icon and text will be injected by JS -->
+             </button>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const curlInput = document.getElementById('curlInput');
+            const outputUrl = document.getElementById('outputUrl');
+            const outputMethod = document.getElementById('outputMethod');
+            const outputHeaders = document.getElementById('outputHeaders');
+            const outputBody = document.getElementById('outputBody');
+            const copyAllBtn = document.getElementById('copyAllBtn');
+            const copyBtns = document.querySelectorAll('.copy-btn');
+            const languageSelector = document.getElementById('languageSelector');
+            const outputCode = document.getElementById('outputCode');
+            const copyCodeBtn = document.getElementById('copyCodeBtn');
+
+            // --- SVG Icons ---
+            const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard group-hover:stroke-white transition-colors"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg> <span>Copy</span>`;
+            const copiedIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-check text-emerald-400"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg> <span class="text-emerald-400">Copied!</span>`;
+            const copyAllIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>Copy All</span>`;
+
+            // --- Utility Functions ---
+
+            function copyWithExecCommand(text) {
+                return new Promise((resolve, reject) => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.top = 0;
+                    textArea.style.left = 0;
+                    textArea.style.opacity = 0;
+                    textArea.style.pointerEvents = 'none';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        const successful = document.execCommand('copy');
+                        if (successful) resolve();
+                        else reject(new Error('Fallback copy failed'));
+                    } catch (err) {
+                        reject(err);
+                    }
+                    document.body.removeChild(textArea);
+                });
+            }
+
+            const unquote = (str) => {
+                if (!str) return '';
+                if ((str.startsWith("'") && str.endsWith("'")) || (str.startsWith('"') && str.endsWith('"'))) {
+                    return str.slice(1, -1);
+                }
+                return str;
+            };
+
+            function parseCurl(curl) {
+                let result = { url: '', method: 'GET', headers: {}, body: '' };
+                const singleLineCurl = curl.replace(/\\\n/g, ' ').replace(/\s\s+/g, ' ').trim();
+                let args = singleLineCurl.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+                if (args[0] && args[0].toLowerCase() === 'curl') args.shift();
+                let hasDataFlag = false;
+                const consumedIndices = new Set();
+                for (let i = 0; i < args.length; i++) {
+                    if (consumedIndices.has(i)) continue;
+                    const arg = args[i], nextArg = args[i + 1];
+                    if (arg === '-X' || arg === '--request') {
+                        if (nextArg) { result.method = nextArg.toUpperCase(); consumedIndices.add(i); consumedIndices.add(i + 1); }
+                    } else if (arg === '-H' || arg === '--header') {
+                        if (nextArg) {
+                            const header = unquote(nextArg), separatorIndex = header.indexOf(':');
+                            if (separatorIndex !== -1) {
+                                result.headers[header.substring(0, separatorIndex).trim()] = header.substring(separatorIndex + 1).trim();
+                            }
+                            consumedIndices.add(i); consumedIndices.add(i + 1);
+                        }
+                    } else if (['-d', '--data', '--data-raw', '--data-binary'].includes(arg)) {
+                        if (nextArg) { result.body = unquote(nextArg); hasDataFlag = true; consumedIndices.add(i); consumedIndices.add(i + 1); }
+                    }
+                }
+                for (let i = 0; i < args.length; i++) {
+                    if (!consumedIndices.has(i)) {
+                        const potentialUrl = args[i];
+                        if (potentialUrl.startsWith('http') || potentialUrl.startsWith("'http") || potentialUrl.startsWith('"http')) {
+                            result.url = unquote(potentialUrl); break;
+                        }
+                    }
+                }
+                if (hasDataFlag && result.method === 'GET') result.method = 'POST';
+                return result;
+            }
+
+            // --- Code Generation Functions ---
+            
+            function generateJsCode(p) {
+                const options = { method: p.method };
+                if (Object.keys(p.headers).length > 0) options.headers = p.headers;
+                if (p.body) options.body = p.body;
+                
+                let optionsStr = JSON.stringify(options, null, 2)
+                    .replace(/"body": "(.+?)"/, (match, body) => `"body": \`${body.replace(/`/g, '\\`').replace(/\\"/g, '"')}\``);
+
+                return `const url = '${p.url}';
+const options = ${optionsStr};
+
+fetch(url, options)
+    .then(res => res.json())
+    .then(json => console.log(json))
+    .catch(err => console.error('error:' + err));`;
+            }
+
+            function generatePythonCode(p) {
+                let headersStr = JSON.stringify(p.headers, null, 4);
+                let bodySetup, reqCall;
+                if (p.body) {
+                    try {
+                        const jsonObj = JSON.parse(p.body);
+                        bodySetup = `payload = ${JSON.stringify(jsonObj, null, 4)}`;
+                        reqCall = `response = requests.request("${p.method}", url, headers=headers, json=payload)`;
+                    } catch (e) {
+                        bodySetup = `payload = "${p.body.replace(/"/g, '\\"')}"`;
+                        reqCall = `response = requests.request("${p.method}", url, headers=headers, data=payload)`;
+                    }
+                } else {
+                    bodySetup = 'payload = {}';
+                    reqCall = `response = requests.request("${p.method}", url, headers=headers)`;
+                }
+                return `import requests
+import json
+
+url = "${p.url}"
+${bodySetup}
+headers = ${headersStr}
+
+${reqCall}
+
+print(response.text)`;
+            }
+
+            function generatePhpCode(p) {
+                let headersArr = Object.entries(p.headers).map(([k, v]) => `    '${k}: ${v.replace(/'/g, "\\'")}'`).join(',\n');
+                let options = [
+                    `CURLOPT_URL => '${p.url}'`,
+                    `CURLOPT_RETURNTRANSFER => true`,
+                    `CURLOPT_CUSTOMREQUEST => '${p.method}'`
+                ];
+                if (p.body) options.push(`CURLOPT_POSTFIELDS => '${p.body.replace(/'/g, "\\'")}'`);
+                if (headersArr) options.push(`CURLOPT_HTTPHEADER => [\n${headersArr}\n]`);
+                
+                return `<?php
+
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+    ${options.join(',\n    ')}
+]);
+
+$response = curl_exec($curl);
+$err = curl_error($curl);
+
+curl_close($curl);
+
+if ($err) {
+    echo "cURL Error #:" . $err;
+} else {
+    echo $response;
+}`;
+            }
+
+            function generateGoCode(p) {
+                let headersStr = Object.entries(p.headers).map(([k, v]) => `req.Header.Add("${k}", "${v}")`).join('\n    ');
+                let bodyStr = p.body ? `var data = strings.NewReader(\`${p.body.replace(/`/g, '`+"`"+`')}\`)` : 'var data = strings.NewReader(``)';
+                let reqCreation = p.body ? `http.NewRequest("${p.method}", url, data)` : `http.NewRequest("${p.method}", url, nil)`;
+
+                return `package main
+
+import (
+    "fmt"
+    "strings"
+    "net/http"
+    "io/ioutil"
+)
+
+func main() {
+    client := &http.Client{}
+    url := "${p.url}"
+    ${bodyStr}
+    req, err := ${reqCreation}
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    ${headersStr}
+    res, err := client.Do(req)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    defer res.Body.Close()
+
+    body, err := ioutil.ReadAll(res.Body)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    fmt.Println(string(body))
+}`;
+            }
+            
+            function generateRustCode(p) {
+                let clientBuilder = `let client = reqwest::Client::new();\n`;
+                let reqBuilder = `let res = client.request(reqwest::Method::from_bytes(b"${p.method}").unwrap(), "${p.url}")`;
+                for (const [key, value] of Object.entries(p.headers)) {
+                    reqBuilder += `\n        .header("${key}", "${value}")`;
+                }
+                if (p.body) {
+                    reqBuilder += `\n        .body(r#"${p.body.replace(/"/g, '""')}"#)`;
+                }
+                reqBuilder += `\n        .send()\n        .await?;`;
+
+                return `use reqwest::Error;
+
+#[tokio::main]
+async fn main() -> Result<(), Error> {
+    ${clientBuilder}
+    ${reqBuilder}
+
+    let body = res.text().await?;
+    println!("Response: {}", body);
+
+    Ok(())
+}`;
+            }
+
+            function generateCodeSnippet() {
+                const lang = languageSelector.value;
+                const parsed = parseCurl(curlInput.value);
+                if (!parsed.url) {
+                    outputCode.textContent = 'Enter a valid cURL command to generate code.';
+                    return;
+                }
+                const generators = {
+                    js: generateJsCode, python: generatePythonCode, php: generatePhpCode,
+                    go: generateGoCode, rust: generateRustCode
+                };
+                outputCode.textContent = generators[lang] ? generators[lang](parsed) : 'Language not supported.';
+            }
+
+            // --- UI Update & Event Handling ---
+
+            function updateUI() {
+                const curlCommand = curlInput.value;
+                if (!curlCommand.trim()) {
+                    clearUI(); return;
+                }
+                const parsed = parseCurl(curlCommand);
+                outputUrl.textContent = parsed.url;
+                outputMethod.textContent = parsed.method;
+                outputHeaders.textContent = Object.entries(parsed.headers).map(([k, v]) => `${k}: ${v}`).join('\n');
+                try {
+                    outputBody.textContent = JSON.stringify(JSON.parse(parsed.body), null, 2);
+                } catch (e) {
+                    outputBody.textContent = parsed.body;
+                }
+                generateCodeSnippet();
+            }
+            
+            function clearUI() {
+                outputUrl.textContent = '';
+                outputMethod.textContent = '';
+                outputHeaders.textContent = '';
+                outputBody.textContent = '';
+                outputCode.textContent = 'Enter a cURL command above.';
+            }
+
+            function handleCopy(e) {
+                const button = e.currentTarget;
+                const type = button.dataset.copy;
+                let textToCopy = '';
+                switch (type) {
+                    case 'url': textToCopy = outputUrl.textContent; break;
+                    case 'method': textToCopy = outputMethod.textContent; break;
+                    case 'headers': textToCopy = outputHeaders.textContent; break;
+                    case 'body': textToCopy = outputBody.textContent; break;
+                }
+                if (textToCopy) {
+                    copyWithExecCommand(textToCopy).then(() => {
+                        button.innerHTML = copiedIcon;
+                        setTimeout(() => { button.innerHTML = copyIcon; }, 2000);
+                    });
+                }
+            }
+
+            function handleCopyAll() {
+                const fullText = `### URL ###\n${outputUrl.textContent}\n\n### METHOD ###\n${outputMethod.textContent}\n\n### HEADERS ###\n${outputHeaders.textContent || 'None'}\n\n### BODY ###\n${outputBody.textContent || 'None'}`;
+                copyWithExecCommand(fullText).then(() => {
+                    copyAllBtn.innerHTML = copiedIcon.replace('w-4 h-4', 'w-5 h-5').replace('Copied!', 'All Copied!');
+                    setTimeout(() => { copyAllBtn.innerHTML = copyAllIcon; }, 2000);
+                });
+            }
+
+            // --- Initial Setup ---
+            copyBtns.forEach(btn => btn.innerHTML = copyIcon);
+            copyCodeBtn.innerHTML = copyIcon;
+            copyAllBtn.innerHTML = copyAllIcon;
+            curlInput.value = curlInput.placeholder;
+            updateUI();
+            
+            // --- Event Listeners ---
+            curlInput.addEventListener('input', updateUI);
+            copyAllBtn.addEventListener('click', handleCopyAll);
+            copyBtns.forEach(btn => btn.addEventListener('click', handleCopy));
+            languageSelector.addEventListener('change', generateCodeSnippet);
+            copyCodeBtn.addEventListener('click', () => {
+                if(outputCode.textContent) {
+                    copyWithExecCommand(outputCode.textContent).then(() => {
+                        copyCodeBtn.innerHTML = copiedIcon;
+                        setTimeout(() => { copyCodeBtn.innerHTML = copyIcon; }, 2000);
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
